@@ -7,6 +7,6 @@ if(count($_POST)) $_PARAMS = $_POST;
 else              $_PARAMS = $_GET;
 
 $CMD = $_PARAMS['CMD'];
-echo $CMD;
+echo $CMD;  
 
 ?>
