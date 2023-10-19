@@ -1,7 +1,6 @@
 DISK : <br>
 
 <?php
-
 session_start();
 
 //-----récupérer les paramètres----
@@ -10,7 +9,8 @@ else              $_PARAMS = $_GET;
 //---------------------------------
 
 $CMD = $_PARAMS['CMD'];
-function Size($location) {
+
+function SIZE($location) {
     $size = filesize($location);
     $fileSize = 0;
     
@@ -22,13 +22,14 @@ function Size($location) {
     }
     return $fileSize;
 }
-
 function LOGIN(){
-    if(isset($_PARAMS['PARAM1'])&&isset($_PARAMS['PARAM2'])){
+    global $_PARAMS;
+    if(isset($_PARAMS['PARAM1']) && isset($_PARAMS['PARAM2'])){
+        echo '<br>PARAM1 PARAM2 OK';
         $_SESSION['username'] = $_PARAMS['PARAM1'];
         $_SESSION['mdp'] = $_PARAMS['PARAM2'];
         if (session_status() == PHP_SESSION_ACTIVE) {
-            echo 'La session est démarrée.';
+            echo '<br>La session est démarrée.';
             if (!is_dir("users/" . $_SESSION['username'])) {
                 mkdir("users/" . $_SESSION['username'], 0777, true);
                 echo "Répertoire créé avec succès.";
@@ -71,10 +72,18 @@ function DIRECTORY() {
     }
     echo '</ul>';
 }
-
+function SESSIONSTATUS(){
+    if(session_status() == PHP_SESSION_ACTIVE){
+       return 'OK ';
+    }
+    else{
+        return '404';
+    }
+}
 
 echo '<u>Commande :</u> '.$CMD;
 echo '<br>';
+echo '<u>Login STATUS :</u> '. SESSIONSTATUS();
 switch($CMD) {
     case "LOGIN" : LOGIN() ; break;
     case "LOGOUT": LOGOUT(); break;

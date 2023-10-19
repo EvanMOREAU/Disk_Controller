@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <title>Disk Manager</title>
+        <link rel='stylesheet' type='text/css' media='screen' href='_style.css'>
+        <script>
+
+            function BODY_onLoad(){
+                {/* ---------------Bouttons-------------- */
+                loginButton = document.getElementById("loginButton");
+                logoutButton = document.getElementById("logoutButton");
+                /* -------------------------------------- */}
+                {/* ----------Info de connexion---------- */
+                    usernameInput = document.getElementById("username");
+                    passwordInput = document.getElementById("password");
+                /* -------------------------------------- */}
+                {/* ---------------Terminal-------------- */
+                    terminalInput = document.getElementById("terminal-input");
+                    terminalUser = document.getElementById("terminal_user");
+                    terminalUser2 = document.getElementById("user");
+                /* -------------------------------------- */}
+
+                {/*-----------Evènement Bouttons----------*/
+                    loginButton.addEventListener("click", function() { LOGIN(); });
+                    logoutButton.addEventListener("click", function() { LOGOUT(); });
+                /* -------------------------------------- */}
+            }
+
+            function LOGIN(){
+                sessionStorage.setItem('username', usernameInput.value);
+                sessionStorage.setItem('password', passwordInput.value);
+                
+                console.log("Nom d'utilisateur: "+sessionStorage.getItem('username')+"\n"+"Mot de passe: "+sessionStorage.getItem('password'));
+
+                terminalUser.textContent = terminalUser2.textContent = sessionStorage.getItem('username') + "@admin:";
+
+            }
+            function LOGOUT(){
+                sessionStorage.clear();
+
+            }
+            function writeln(text){
+               terminalInput.value += text + "\n";
+            }
+
+            function write(text){
+                terminalInput.value += text;
+            }
+            
+        </script>
+    </head>
+    <body onload="BODY_onLoad()">
+        <div class="container">
+            <div class="terminal_toolbar">
+                <div class="butt">
+                    <button class="btn btn-color"></button>
+                    <button class="btn"></button>
+                    <button class="btn"></button>
+                </div>
+                <div class="butt">
+                    <input type="text" id="username" placeholder="Nom d'utilisateur" width="15px">
+                    <input type="password" id="password" placeholder="Mot de passe"width="15px">
+                    <button id="loginButton">LOGIN</button>
+                    <button id="logoutButton">LOGOUT</button>
+                    <button>WHOAMI</button>
+                    <button>DIR</button>
+                </div>
+                <p class="user" id="user">Connectez-vous pour faire des actions</p>
+                <button class="add_tab">
+                    +
+                </button>
+            </div>
+            <div class="terminal_body">
+                <div class="terminal_promt">
+                    <span class="terminal_user" id="terminal_user"></span>
+                    <span class="terminal_location">~</span>
+                    <span class="terminal_bling">$</span>
+                    <span class="terminal_cursor"></span>
+                    <textarea id="terminal-input" rows="55%"></textarea>
+                </div>
+            </div>
+        </div>   
+    </body>
+</html>
