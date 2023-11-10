@@ -3,7 +3,9 @@
     <head>
         <meta charset='utf-8'>
         <title>Disk Manager</title>
-        <link rel='stylesheet' type='text/css' media='screen' href='_style.css'>
+        <link rel='stylesheet' type='text/css' media='screen' href='/addons/css/_style.css'>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
         <script>
 
             function BODY_onLoad(){
@@ -89,8 +91,69 @@
                     sendRequest(cmd, null, null, function (response) {
                         handleResponse(response);
                     });
+                } else if (cmd == 'CD1') {
+                    sendRequest(cmd, null, null, function (response) {
+                        handleDirectoryList(response);
+                        console.log('TTTTT')
+                    });
                 }
             }
+            function handleDirectoryList(response) {
+                var modalBody = document.querySelector('.modal-body');
+                modalBody.innerHTML = ''; // Effacer le contenu actuel du modal
+
+                if (response.status === 'success') {
+                    var directories = response.content;
+
+                    // Créer une liste à puces pour afficher les répertoires dans le modal
+                    var ul = document.createElement('ul');
+
+                    // Ajouter un bouton ".." au début de la liste
+                    var liDotDot = document.createElement('li');
+                    var buttonDotDot = document.createElement('button');
+                    buttonDotDot.textContent = '..';
+                    buttonDotDot.addEventListener('click', function() {
+                        // Ajouter ici l'action que vous souhaitez effectuer lorsque le bouton est cliqué
+                        // Par exemple, remonter d'un niveau en appelant une fonction appropriée
+                        console.log('Revenir au répertoire précédent');
+                    });
+                    liDotDot.appendChild(buttonDotDot);
+                    ul.appendChild(liDotDot);
+
+                    // Ajouter les boutons pour les répertoires
+                    directories.forEach(function (directory) {
+                        var li = document.createElement('li');
+
+                        // Créer un bouton pour chaque répertoire
+                        var button = document.createElement('button');
+                        button.textContent = directory;
+                        button.addEventListener('click', function() {
+                            // Ajouter ici l'action que vous souhaitez effectuer lorsque le bouton est cliqué
+                            // Par exemple, changer de répertoire en appelant une fonction appropriée
+                            console.log('Changer de répertoire vers : ' + directory);
+                        });
+
+                        // Ajouter le bouton au li
+                        li.appendChild(button);
+
+                        // Ajouter le li à la liste à puces
+                        ul.appendChild(li);
+                    });
+
+                    // Ajouter la liste à puces au modal
+                    modalBody.appendChild(ul);
+
+                    // Afficher le modal après l'ajout des éléments
+                    var myModal = new bootstrap.Modal(document.getElementById('exampleModal'));
+                    myModal.show();
+                } else {
+                    modalBody.textContent = response.message;
+                }
+            }
+
+
+    
+
         </script>
     </head>
     <body onload="BODY_onLoad()">
@@ -108,6 +171,7 @@
                     <button id="logoutButton" onclick="cmd_action('LOGOUT')">LOGOUT</button>
                     <button onclick="cmd_action('WHOAMI')">WHOAMI</button>
                     <button onclick="cmd_action('DIR')">DIR</button>
+                    <button data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="cmd_action('CD1')">CD</button>
                 </div>
                 <p class="user" id="user">Connectez-vous pour faire des actions</p>
                 <button class="add_tab">
@@ -127,6 +191,21 @@
                     
                 </div>
             </div>
-        </div>   
+        </div>  
+        
+        <!-- Modal -->
+        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Change Directory</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+    
+                </div>
+            </div>
+            </div>
+        </div>
     </body>
 </html>
