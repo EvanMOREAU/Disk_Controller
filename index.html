@@ -8,8 +8,8 @@
 
             function BODY_onLoad(){
                 {/* ---------------Bouttons-------------- */
-                loginButton = document.getElementById("loginButton");
-                logoutButton = document.getElementById("logoutButton");
+                    loginButton = document.getElementById("loginButton");
+                    logoutButton = document.getElementById("logoutButton");
                 /* -------------------------------------- */}
                 {/* ----------Info de connexion---------- */
                     usernameInput = document.getElementById("username");
@@ -21,33 +21,76 @@
                     terminalUser2 = document.getElementById("user");
                 /* -------------------------------------- */}
 
-                {/*-----------Evènement Bouttons----------*/
-                    loginButton.addEventListener("click", function() { LOGIN(); });
-                    logoutButton.addEventListener("click", function() { LOGOUT(); });
-                /* -------------------------------------- */}
             }
 
-            function LOGIN(){
-                sessionStorage.setItem('username', usernameInput.value);
-                sessionStorage.setItem('password', passwordInput.value);
-                
-                console.log("Nom d'utilisateur: "+sessionStorage.getItem('username')+"\n"+"Mot de passe: "+sessionStorage.getItem('password'));
 
-                terminalUser.textContent = terminalUser2.textContent = sessionStorage.getItem('username') + "@admin:";
+            function sendRequest(cmd, param1, param2, callback) {
+                var xhr = new XMLHttpRequest();
+                xhr.onload = function () {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        var responseText = xhr.responseText;
+                        var responseObject = JSON.parse(responseText);
+                        if (callback) {
+                            callback(responseObject);
+                        }
+                    }
+                };
 
-            }
-            function LOGOUT(){
-                sessionStorage.clear();
+                var formData = new FormData();
+                formData.append('CMD', cmd);
+                if (param1) {
+                    formData.append('PARAM1', param1);
+                }
+                if (param2) {
+                    formData.append('PARAM2', param2);
+                }
 
-            }
-            function writeln(text){
-               terminalInput.value += text + "\n";
+                xhr.open('POST', 'disk.php');
+                xhr.send(formData);
             }
 
-            function write(text){
-                terminalInput.value += text;
+
+            // Fonction pour gérer la réponse
+            function handleResponse(responseObject) {
+                var responseTextarea = document.getElementById('terminal-input');
+                try {
+                    if (typeof responseObject === 'object') {
+                        responseTextarea.value = JSON.stringify(responseObject, null, 2);
+                    } else {
+                        responseTextarea.value = responseObject;
+                    }
+                } catch (error) {
+                    console.error("Error parsing or handling response:", responseObject);
+                    responseTextarea.value = "Error handling response";
+                }
             }
-            
+
+            function cmd_action(cmd) {
+                if (cmd == 'LOGIN') {
+                    param1 = document.getElementById("username").value;
+
+                    param2 = document.getElementById("password").value;
+                    sendRequest(cmd, param1, param2, function (response) {
+                        handleResponse(response);
+                        terminalUser.textContent = terminalUser2.textContent = param1 + "@admin:";
+                    });
+                } else if (cmd == 'LOGOUT') {
+                    
+                    sendRequest(cmd, null, null, function (response) {
+                        handleResponse(response);
+                        terminalUser.textContent = terminalUser2.textContent = "Connectez-vous pour faire des actions";
+                    });
+                } else if (cmd == 'WHOAMI') {
+
+                    sendRequest(cmd, null, null, function (response) {
+                        handleResponse(response);
+                    });
+                } else if (cmd == 'DIR') {
+                    sendRequest(cmd, null, null, function (response) {
+                        handleResponse(response);
+                    });
+                }
+            }
         </script>
     </head>
     <body onload="BODY_onLoad()">
@@ -61,10 +104,10 @@
                 <div class="butt">
                     <input type="text" id="username" placeholder="Nom d'utilisateur" width="15px">
                     <input type="password" id="password" placeholder="Mot de passe"width="15px">
-                    <button id="loginButton">LOGIN</button>
-                    <button id="logoutButton">LOGOUT</button>
-                    <button>WHOAMI</button>
-                    <button>DIR</button>
+                    <button id="loginButton" onclick="cmd_action('LOGIN')">LOGIN</button>
+                    <button id="logoutButton" onclick="cmd_action('LOGOUT')">LOGOUT</button>
+                    <button onclick="cmd_action('WHOAMI')">WHOAMI</button>
+                    <button onclick="cmd_action('DIR')">DIR</button>
                 </div>
                 <p class="user" id="user">Connectez-vous pour faire des actions</p>
                 <button class="add_tab">
@@ -77,7 +120,11 @@
                     <span class="terminal_location">~</span>
                     <span class="terminal_bling">$</span>
                     <span class="terminal_cursor"></span>
-                    <textarea id="terminal-input" rows="55%"></textarea>
+                    <div style="display: flex; flex-direction: column;">
+                        <!-- <textarea id="terminal-input2" heigth="10px"></textarea> -->
+                        <textarea id="terminal-input" ></textarea>
+                    </div>
+                    
                 </div>
             </div>
         </div>   

@@ -1,12 +1,10 @@
-DISK : <br>
-
 <?php
 session_start();
 
 //-----récupérer les paramètres----
-if(count($_POST)) $_PARAMS = $_POST;
-else              $_PARAMS = $_GET;
+$_PARAMS = $_POST;
 //---------------------------------
+
 
 $CMD = $_PARAMS['CMD'];
 
@@ -22,76 +20,101 @@ function SIZE($location) {
     }
     return $fileSize;
 }
+
 function LOGIN(){
     global $_PARAMS;
-    if(isset($_PARAMS['PARAM1']) && isset($_PARAMS['PARAM2'])){
-        echo '<br>PARAM1 PARAM2 OK';
-        $_SESSION['username'] = $_PARAMS['PARAM1'];
-        $_SESSION['mdp'] = $_PARAMS['PARAM2'];
-        if (session_status() == PHP_SESSION_ACTIVE) {
-            echo '<br>La session est démarrée.';
-            if (!is_dir("users/" . $_SESSION['username'])) {
-                mkdir("users/" . $_SESSION['username'], 0777, true);
-                echo "Répertoire créé avec succès.";
-            }
-            echo '<br>';
-            $_SESSION['location'] = "C:/wamp64/www/users/".$_SESSION['username'];
-            echo $_SESSION['location'];
+
+    // Récupérer les paramètres de la commande
+    $param1 = isset($_PARAMS['PARAM1']) ? $_PARAMS['PARAM1'] : '';
+    $param2 = isset($_PARAMS['PARAM2']) ? $_PARAMS['PARAM2'] : '';
+    error_log(' Username 1.1: ' . $param1);
+
+    // Vérifier si les paramètres requis sont présents
+    if (!empty($param1) && !empty($param2)) {
+        // Effectuer les opérations de connexion
+        $_SESSION['username'] = $param1;
+        $_SESSION['mdp'] = $param2;
+        error_log(' Username 1: ' . $param1);
+
+        if (!is_dir("users/" . $_SESSION['username'])) {
+            mkdir("users/" . $_SESSION['username'], 0777, true);
+            $response = array('status' => 'success', 'message' => 'Login successful', 'home_status' => 'created');
         } else {
-            echo 'La session n\'est pas démarrée.';
+            $response = array('status' => 'success', 'message' => 'Login successful');
         }
+    } else {
+        $response = array('status' => 'error', 'message' => 'Missing parameters for login');
     }
+
+    // Envoyer la réponse JSON
+    send_response('LOGIN', $response['status'], $response['message']);
+    exit; // Assurez-vous de terminer l'exécution du script après avoir envoyé la réponse JSON
 }
 function LOGOUT(){
     session_destroy();
+
+    // Envoyer une réponse de déconnexion au format JSON
+    send_response('LOGOUT', 'success', 'Logout successful');
+    exit;
 }
+
 function WHOAMI(){
-    echo '<br>';
-    echo '<u>Username :</u> '.$_SESSION['username'] ;
-    echo '<br>';
-    echo $_SESSION['mdp'] ;
-    echo '<br>';
+    if(isset($_SESSION['username'])) {
+        error_log(' Username 2: ' . $_SESSION['username']);
+        $response = array('status' => 'success', 'username' => $_SESSION['username']);
+    } else {
+        $response = array('status' => 'error', 'message' => 'User not logged in');
+    }
+
+    send_response('WHOAMI', $response['status'], $response['message']);
+    exit;
 }
+
 function DIRECTORY() {
-    $rep = 'users/' . $_SESSION['username'];
-    $dirs = scandir($rep);
-    date_default_timezone_set('Europe/Paris');
-    echo '<ul>';
-    foreach ($dirs as $dir) {
-        if ($dir != '.' && $dir != '..') {
-            $location = $rep . '/' . $dir;
-            echo '<li>';
-            if (is_dir($location)) {
-                echo "[DIR] " . $dir . "<br>";
-            } elseif(is_file($location)) {
-             
-                echo "[FILE] " . $dir . " <u>" .date('Y/m/d-H:i:s', filemtime($location)). "</u>". " " . Size($location) . "<br>";
+    if(isset($_SESSION['username'])) {
+        $rep = 'users/' . $_SESSION['username'];
+        $dirs = scandir($rep);
+        $response = array('status' => 'success', 'directories' => array());
+
+        foreach ($dirs as $dir) {
+            if ($dir != '.' && $dir != '..') {
+                $location = $rep . '/' . $dir;
+                if (is_dir($location)) {
+                    $response['directories'][] = array('type' => 'dir', 'name' => $dir);
+                } elseif(is_file($location)) {
+                    $response['directories'][] = array('type' => 'file', 'name' => $dir, 'size' => SIZE($location), 'date' => filemtime($location));
+                }
             }
-            echo '</li>';
         }
-    }
-    echo '</ul>';
-}
-function SESSIONSTATUS(){
-    if(session_status() == PHP_SESSION_ACTIVE){
-       return 'OK ';
-    }
-    else{
-        return '404';
+
+        // Envoyer une réponse au format JSON
+        send_response('DIRECTORY', $response['status'], '');
+        exit;
+    } else {
+        $response = array('status' => 'error', 'message' => 'User not logged in');
+        send_response('DIRECTORY', $response['status'], $response['message']);
+        exit;
     }
 }
 
-echo '<u>Commande :</u> '.$CMD;
-echo '<br>';
-echo '<u>Login STATUS :</u> '. SESSIONSTATUS();
+function send_response($cmd, $status, $content = null){
+    $response = array('cmd' => $cmd, 'status' => $status, 'content' => $content,'debug' => array('user' => $_SESSION['username'], 'home' => $home, 'pwd' => $pwd ));
+    // Envoyer la réponse JSON
+    echo json_encode($response);
+    exit; // Assurez-vous de terminer l'exécution du script après avoir envoyé la réponse JSON
+}
+
+
 switch($CMD) {
     case "LOGIN" : LOGIN() ; break;
     case "LOGOUT": LOGOUT(); break;
     case "WHOAMI": WHOAMI(); break;
     case "DIR": DIRECTORY(); break;
     default:
-        echo "Commande non reconnue";
-        break;
+    // Envoyer une réponse d'erreur au format JSON pour les commandes non reconnues
+    $response = array('status' => 'error', 'message' => 'Unknown command');
+    echo json_encode($response);
+    break;
 }
 ?>
 

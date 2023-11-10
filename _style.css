@@ -216,3 +216,16 @@ textarea {
   .action:active span::before {
     background: #2751cd;
   }
+
+#terminal-input2, #terminal-input {
+  clear: both;
+}
+
+#terminal-input2 {
+  height: 50px; /* ajustez la hauteur selon vos besoins */
+}
+
+#terminal-input {
+  height: 800px; /* ajustez la hauteur selon vos besoins */
+  width: 1800px;
+}
