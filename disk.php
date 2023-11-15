@@ -1,13 +1,17 @@
 <?php
 session_start();
 
+
+foreach($_SESSION as $key => $value){
+    error_log('Avant Session : ' . $key . ' -> '. $value );
+}
+
 //-----récupérer les paramètres----
 $_PARAMS = $_POST;
 //---------------------------------
 
-
 $CMD = $_PARAMS['CMD'];
-$pwd = null;
+
 function SIZE($location) {
     $size = filesize($location);
     $fileSize = 0;
@@ -21,52 +25,54 @@ function SIZE($location) {
     return $fileSize;
 }
 function LOGIN(){
-    global $_PARAMS, $pwd; 
-
+    global $_PARAMS; 
     $param1 = isset($_PARAMS['PARAM1']) ? $_PARAMS['PARAM1'] : '';
     $param2 = isset($_PARAMS['PARAM2']) ? $_PARAMS['PARAM2'] : '';
-    error_log(' Username 1.1: ' . $param1);
 
     if (!empty($param1) && !empty($param2)) {
         $_SESSION['username'] = $param1;
         $_SESSION['mdp'] = $param2;
-        error_log(' Username 1: ' . $param1);
 
         if (!is_dir("users/" . $_SESSION['username'])) {
             mkdir("users/" . $_SESSION['username'], 0777, true);
             $response = array('status' => 'success', 'message' => 'Login successful', 'home_status' => 'created');
+            $_SESSION['pwd'] = "/";
+            $_SESSION['home'] = "C:/Users/moreeva/Documents/Disk_Controller/users/" . $_SESSION['username'];
+
         } else {
             $response = array('status' => 'success', 'message' => 'Login successful');
+            $_SESSION['pwd'] = "/";
+            $_SESSION['home'] = "C:/Users/moreeva/Documents/Disk_Controller/users/" . $_SESSION['username'];
         }
+
     } else {
         $response = array('status' => 'error', 'message' => 'Missing parameters for login');
     }
-    $pwd = '/home/'.$_SESSION['username'];
     send_response('LOGIN', $response['status'], $response['message']);
     exit; 
 }
 function LOGOUT(){
-    global $pwd;
-
+    global $_PARAMS;
     session_unset();
     session_destroy();
 
-    $pwd = null;
     send_response('LOGOUT', 'success', 'Logout successful');
     exit;
 }
 function WHOAMI(){
+    global $_PARAMS;
     if(isset($_SESSION['username'])) {
-        error_log(' Username 2: ' . $_SESSION['username']);
         $response = array('status' => 'success', 'username' => $_SESSION['username']);
+        send_response('WHOAMI', $response['status']);
+
     } else {
         $response = array('status' => 'error', 'message' => 'User not logged in');
+        send_response('WHOAMI', $response['status'], $response['message']);
     }
-
-    send_response('WHOAMI', $response['status'], $response['message']);
     exit;
 }
 function DIRECTORY() {
+    global $_PARAMS;
     if(isset($_SESSION['username'])) {
         $rep = 'users/' . $_SESSION['username'];
         $dirs = scandir($rep);
@@ -84,7 +90,7 @@ function DIRECTORY() {
         }
 
         // Envoyer une réponse au format JSON
-        send_response('DIRECTORY', $response['status'], '');
+        send_response('DIRECTORY', $response['status'], $response['directories']);
         exit;
     } else {
         $response = array('status' => 'error', 'message' => 'User not logged in');
@@ -93,8 +99,7 @@ function DIRECTORY() {
     }
 }
 function send_response($cmd, $status, $content = null){
-    global $pwd;
-
+    global $_PARAMS;
     $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'N/A';
 
     $response = array(
@@ -104,25 +109,27 @@ function send_response($cmd, $status, $content = null){
         'debug' => array(
             'user' => $username,
             'home' => isset($_SESSION['username']) ? '/home/' . $_SESSION['username'] : 'N/A',
-            'pwd' => $pwd
+            'pwd'  => isset($_SESSION['pwd']) ? '' . $_SESSION['pwd'] : 'N/A',
         )
     );
 
     echo json_encode($response);
+    foreach($_SESSION as $key => $value){
+        error_log('Après Session : ' . $key . ' -> '. $value );
+    }    
     exit;
 }
 function LIST_DIRECTORIES() {
+    global $_PARAMS;
     if (isset($_SESSION['username'])) {
-        $currentDirectory = 'users/' . $_SESSION['username'];
+        $currentDirectory = $_SESSION['home'] . $_SESSION['pwd'];
         $dirs = scandir($currentDirectory);
         $directories = array();
-
         foreach ($dirs as $dir) {
             if ($dir != '.' && $dir != '..' && is_dir($currentDirectory . '/' . $dir)) {
                 $directories[] = $dir;
             }
         }
-
         $response = array('status' => 'success', 'directories' => $directories);
         send_response('LIST_DIRECTORIES', $response['status'], $response['directories']);
         exit;
@@ -132,6 +139,46 @@ function LIST_DIRECTORIES() {
         exit;
     }
 }
+function CHANGE_DIRECTORY() {
+    global $_PARAMS;
+    $newDirectory = $_PARAMS['PARAM1'];
+    if (!empty($newDirectory)) { // S'assurer que le nouveau répertoire existe
+        if( $newDirectory == '..'){
+            //Code non fonctionnel ->
+        // // Si le nouveau répertoire est "..", remonter d'un niveau
+        // $parts = explode('/', rtrim($_SESSION['pwd'], '/'));
+        // array_pop($parts); // Retirer le dernier élément du tableau
+        // $_SESSION['pwd'] = implode('/', $parts);
+        
+        // error_log('PWD : ' . $_SESSION['pwd']);
+        // send_response('CD', 'success', 'Directory changed successfully');
+        }else{
+            $newDirectoryPath = $_SESSION['home'] . $_SESSION['pwd'];
+            if (is_dir($newDirectoryPath)) {
+                $_SESSION['pwd'] .= $newDirectory.'/';
+                error_log('PWD : ' . $_SESSION['pwd']);
+                send_response('CD', 'success', 'Directory changed successfully');
+            } else {
+                send_response('CD', 'error', $_PARAMS);
+            }
+        }
+    } else {
+        send_response('CD', 'error', 'Missing parameters');
+        error_log('There is no PARAM1 in the $_PARAMS["PARAM1"]');
+    }
+    exit;
+}
+function HOME(){
+    global $_PARAMS;
+    $_SESSION['pwd'] = '/';
+    if($_SESSION['pwd'] == '/'){
+        send_response('HOME', 'success', $_SESSION['pwd']);
+    }else{
+        send_response('HOME', 'error', $_SESSION['pwd']);
+    }
+        
+    
+}
 
 
 switch($CMD) {
@@ -140,11 +187,17 @@ switch($CMD) {
     case "WHOAMI": WHOAMI(); break;
     case "DIR": DIRECTORY(); break;
     case "CD1": LIST_DIRECTORIES(); break;
+    case "CHANGE_DIRECTORY": CHANGE_DIRECTORY(); break;
+    case "HOME": HOME(); break;
+
+
     default:
     // Envoyer une réponse d'erreur au format JSON pour les commandes non reconnues
     $response = array('status' => 'error', 'message' => 'Unknown command');
     echo json_encode($response);
     break;
 }
+
+
 ?>
 

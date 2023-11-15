@@ -8,6 +8,7 @@ html, body {
     display: flex;
     flex-direction: column;
     height: 100%;
+    width: 100%;
 }
 .terminal_toolbar {
     display: flex;
@@ -26,6 +27,7 @@ html, body {
     padding: 10px;
     background: black;
     color: white;
+    width: 100%;
 }
 
 textarea {
@@ -217,14 +219,9 @@ textarea {
     background: #2751cd;
   }
 
-#terminal-input2, #terminal-input {
+#terminal-input {
   clear: both;
 }
-
-#terminal-input2 {
-  height: 50px; /* ajustez la hauteur selon vos besoins */
-}
-
 #terminal-input {
   height: 800px; /* ajustez la hauteur selon vos besoins */
   width: 1150px;
