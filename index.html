@@ -26,13 +26,17 @@
             function sendRequest(cmd, param1 = null, param2 = null, callback) {
                 console.log('param1 : ', param1)
                 var xhr = new XMLHttpRequest();
+                console.log(xhr)
                 xhr.onload = function () {
                     if (xhr.status >= 200 && xhr.status < 300) {
                         var responseText = xhr.responseText;
-                        console.log('Response Object:', responseObject);
-                        var responseObject = JSON.parse(responseText);
-                        if (callback) {
-                            callback(responseObject);
+                        if( responseText != ''){
+                            console.log('Response Text: "', responseText, '"');
+                            var responseObject = JSON.parse(responseText);
+                            console.log('Response Object:', responseObject);
+                            if (callback) {
+                                callback(responseObject);
+                            }
                         }
                     }
                 };
@@ -97,11 +101,7 @@
                     console.log('param : ', param);
                     // Assurez-vous que param est défini avant d'appeler sendRequest
                     if (param) {
-                        // Fermer l'ancien modal
-                        var oldModal = document.getElementById('cD');
-                        var myModal = new bootstrap.Modal(oldModal);
-                        myModal.hide();
-
+                    
                         sendRequest('CHANGE_DIRECTORY', param, null, function (response) {
                             handleResponse(response);
                             sendRequest('CD1', null, null, function (response) {
@@ -215,7 +215,7 @@
         </div>  
         
         <!-- Modal -->
-        <div class="modal fade" id="cD" tabindex="-1" aria-labelledby="cDLabel" aria-hidden="true">
+        <div class="modal" id="cD" tabindex="-1" aria-labelledby="cDLabel" aria-hidden="true">
             <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">

@@ -9,6 +9,9 @@ pwd :   '/'             dupont à sa racine (home)
         '/plans/'       dupont dans son sous-répertoire /plans
         '/plans/appart' dupont dans son sous-répertoire /plans/appart
 
+
+CMD home ramène à home:'C:/wamp64/www/users/dupont'   
+
 ====================
 
 DIR disk.php? CMD=DIR
@@ -33,3 +36,9 @@ date:"2023/10/18-14:44:43" permet des comparaisons de strings
 date:"20221018144443"           ce serait dégueulasse de faire ça #RIQUETTE
 
 
+---------------------------------------------------------------------
+SESSION
+=======
+user    DUPONT
+home    c:/wamp64/www/USERS
+pwd     /                       répertoire courant de 

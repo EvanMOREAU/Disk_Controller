@@ -1,11 +1,5 @@
 <?php
 session_start();
-
-
-foreach($_SESSION as $key => $value){
-    error_log('Avant Session : ' . $key . ' -> '. $value );
-}
-
 //-----récupérer les paramètres----
 $_PARAMS = $_POST;
 //---------------------------------
@@ -110,56 +104,79 @@ function send_response($cmd, $status, $content = null){
             'user' => $username,
             'home' => isset($_SESSION['username']) ? '/home/' . $_SESSION['username'] : 'N/A',
             'pwd'  => isset($_SESSION['pwd']) ? '' . $_SESSION['pwd'] : 'N/A',
-        )
+            'SESSION' => $_SESSION, // Ajoutez directement l'ensemble de la session
+            )
     );
 
     echo json_encode($response);
-    foreach($_SESSION as $key => $value){
-        error_log('Après Session : ' . $key . ' -> '. $value );
-    }    
+    // foreach($_SESSION as $key => $value){
+    //     error_log('Après Session : ' . $key . ' -> '. $value );
+    // }    
     exit;
 }
 function LIST_DIRECTORIES() {
     global $_PARAMS;
     if (isset($_SESSION['username'])) {
         $currentDirectory = $_SESSION['home'] . $_SESSION['pwd'];
-        $dirs = scandir($currentDirectory);
-        $directories = array();
-        foreach ($dirs as $dir) {
-            if ($dir != '.' && $dir != '..' && is_dir($currentDirectory . '/' . $dir)) {
-                $directories[] = $dir;
+        
+        // Vérifier si le chemin du répertoire existe avant d'appeler scandir
+        if (is_dir($currentDirectory)) {
+            $dirs = scandir($currentDirectory);
+            $directories = array();
+            foreach ($dirs as $dir) {
+                if ($dir != '.' && $dir != '..' && is_dir($currentDirectory . '/' . $dir)) {
+                    $directories[] = $dir;
+                }
             }
+            $response = array('status' => 'success', 'directories' => $directories);
+            send_response('LIST_DIRECTORIES', $response['status'], $response['directories']);
+            exit;
+        } else {
+            $response = array('status' => 'error', 'message' => 'Directory not found');
+            send_response('LIST_DIRECTORIES', $response['status'], $response['message']);
+            exit;
         }
-        $response = array('status' => 'success', 'directories' => $directories);
-        send_response('LIST_DIRECTORIES', $response['status'], $response['directories']);
-        exit;
     } else {
         $response = array('status' => 'error', 'message' => 'User not logged in');
         send_response('LIST_DIRECTORIES', $response['status'], $response['message']);
         exit;
     }
 }
+
 function CHANGE_DIRECTORY() {
     global $_PARAMS;
     $newDirectory = $_PARAMS['PARAM1'];
-    if (!empty($newDirectory)) { // S'assurer que le nouveau répertoire existe
-        if( $newDirectory == '..'){
-            //Code non fonctionnel ->
-        // // Si le nouveau répertoire est "..", remonter d'un niveau
-        // $parts = explode('/', rtrim($_SESSION['pwd'], '/'));
-        // array_pop($parts); // Retirer le dernier élément du tableau
-        // $_SESSION['pwd'] = implode('/', $parts);
-        
-        // error_log('PWD : ' . $_SESSION['pwd']);
-        // send_response('CD', 'success', 'Directory changed successfully');
-        }else{
-            $newDirectoryPath = $_SESSION['home'] . $_SESSION['pwd'];
+    if (!empty($newDirectory)) { // S'assurer que le nouveau répertoire est défini
+        if ($newDirectory == '..') {
+            // Si le nouveau répertoire est "..", remonter d'un niveau
+            $parts = explode('/', rtrim($_SESSION['pwd'], '/'));
+            $extractedValue = array_pop($parts);
+
+            // Vérifier si le chemin est déjà la racine
+            if (empty($parts)) {
+                $_SESSION['pwd'] = '/';
+            } else {
+                // Vérifier si le tableau a plus d'un élément après l'extraction de ".."
+                if (count($parts) > 1) {
+                    $_SESSION['pwd'] = implode('/', $parts) . '/';
+                } else {
+                    $_SESSION['pwd'] = implode('/', $parts);
+                }
+            }
+            if($_SESSION['pwd'] == ""){
+                $_SESSION['pwd'] = "/";
+            }
+            // Envoyer une réponse pour indiquer que le répertoire a été changé avec succès
+            send_response('CD', 'success', 'Directory changed successfully');
+        } else {
+            $newDirectoryPath = $_SESSION['home'] . $_SESSION['pwd'] . $newDirectory;
             if (is_dir($newDirectoryPath)) {
-                $_SESSION['pwd'] .= $newDirectory.'/';
-                error_log('PWD : ' . $_SESSION['pwd']);
+                // Ajouter un "/" à la fin du chemin si ce n'est pas déjà le cas
+                $_SESSION['pwd'] = rtrim($_SESSION['pwd'], '/') . '/';
+                $_SESSION['pwd'] .= $newDirectory . '/';
                 send_response('CD', 'success', 'Directory changed successfully');
             } else {
-                send_response('CD', 'error', $_PARAMS);
+                send_response('CD', 'error', 'Directory not found');
             }
         }
     } else {
@@ -168,6 +185,9 @@ function CHANGE_DIRECTORY() {
     }
     exit;
 }
+
+
+
 function HOME(){
     global $_PARAMS;
     $_SESSION['pwd'] = '/';
@@ -179,8 +199,6 @@ function HOME(){
         
     
 }
-
-
 switch($CMD) {
     case "LOGIN" : LOGIN() ; break;
     case "LOGOUT": LOGOUT(); break;
@@ -200,4 +218,3 @@ switch($CMD) {
 
 
 ?>
-
