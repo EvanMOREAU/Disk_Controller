@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <title>Disk Manager</title>
+        <link rel='stylesheet' type='text/css' media='screen' href='/addons/css/_style.css'>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+        <script>
+            function BODY_onLoad(){
+                {/* ---------------Bouttons-------------- */
+                    loginButton = document.getElementById("loginButton");
+                    logoutButton = document.getElementById("logoutButton");
+                /* -------------------------------------- */}
+                {/* ----------Info de connexion---------- */
+                    usernameInput = document.getElementById("username");
+                    passwordInput = document.getElementById("password");
+                /* -------------------------------------- */}
+                {/* ---------------Terminal-------------- */
+                    terminalInput = document.getElementById("terminal-input");
+                    terminalUser = document.getElementById("terminal_user");
+                    terminalUser2 = document.getElementById("user");
+                /* -------------------------------------- */}
+
+            }
+            function sendRequest(cmd, param1 = null, param2 = null, callback) {
+                console.log('param1 : ', param1)
+                var xhr = new XMLHttpRequest();
+                console.log(xhr)
+                xhr.onload = function () {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        var responseText = xhr.responseText;
+                        if( responseText != ''){
+                            console.log('Response Text: "', responseText, '"');
+                            var responseObject = JSON.parse(responseText);
+                            console.log('Response Object:', responseObject);
+                            if (callback) {
+                                callback(responseObject);
+                            }
+                        }
+                    }
+                };
+
+                var formData = new FormData();
+                formData.append('CMD', cmd);
+                if(param1 != null){
+                    formData.append('PARAM1', param1);
+                    console.log('PARAM1 HAVE BEEN SET' + param1);
+                }
+                if(param2 != null){
+                    formData.append('PARAM2', param2);
+                    console.log('PARAM2 HAVE BEEN SET');
+                }
+
+                console.log('FormData:', formData);
+                xhr.open('POST', 'disk.php');
+                xhr.send(formData);
+
+            }
+            function handleResponse(responseObject) {
+                var responseTextarea = document.getElementById('terminal-input');
+                try {
+                    if (typeof responseObject === 'object') {
+                        responseTextarea.value = JSON.stringify(responseObject, null, 2);
+                    } else {
+                        responseTextarea.value = responseObject;
+                    }
+                } catch (error) {
+                    console.error("Error parsing or handling response:", responseObject);
+                    responseTextarea.value = "Error handling response";
+                }
+            }
+            function cmd_action(cmd, param = null) {
+                if (cmd == 'LOGIN') {
+                    param1 = document.getElementById("username").value;
+                    param2 = document.getElementById("password").value;
+                    sendRequest(cmd, param1, param2, function (response) {
+                        handleResponse(response);
+                        terminalUser.textContent = terminalUser2.textContent = param1 + "@admin:";
+                    });
+                } else if (cmd == 'LOGOUT') {
+                    
+                    sendRequest(cmd, null, null, function (response) {
+                        handleResponse(response);
+                        terminalUser.textContent = terminalUser2.textContent = "Connectez-vous pour faire des actions";
+                    });
+                } else if (cmd == 'WHOAMI') {
+
+                    sendRequest(cmd, null, null, function (response) {
+                        handleResponse(response);
+                    });
+                } else if (cmd == 'DIR') {
+                    sendRequest(cmd, null, null, function (response) {
+                        handleResponse(response);
+                    });
+                } else if (cmd == 'CD1') {
+                    sendRequest(cmd, null, null, function (response) {
+                        handleDirectoryList(response);
+                    });
+                } else if (cmd == 'CD2') {
+                    console.log('param : ', param);
+                    // Assurez-vous que param est défini avant d'appeler sendRequest
+                    if (param) {
+                    
+                        sendRequest('CHANGE_DIRECTORY', param, null, function (response) {
+                            handleResponse(response);
+                            sendRequest('CD1', null, null, function (response) {
+                                handleDirectoryList(response);
+
+                                // Afficher le nouveau modal
+                                var newModal = new bootstrap.Modal(document.getElementById('cD'));
+                                newModal.show();
+                            });
+                        });
+                    } else {
+                        console.error('Param is null or undefined');
+                    }
+                } else if (cmd == 'HOME') {
+                    sendRequest(cmd, null, null, function (response) {
+                        handleResponse(response);
+                    });
+                } 
+            }
+            function handleDirectoryList(response) {
+                var modalBody = document.querySelector('.modal-body');
+                modalBody.innerHTML = ''; // Effacer le contenu actuel du modal
+
+                if (response.status === 'success') {
+                    var directories = response.content;
+
+                    // Créer une liste à puces pour afficher les répertoires dans le modal
+                    var ul = document.createElement('ul');
+
+                    // Ajouter un bouton ".." au début de la liste
+                    var liDotDot = document.createElement('li');
+                    var buttonDotDot = document.createElement('button');
+                    buttonDotDot.textContent = '..';
+                    buttonDotDot.addEventListener('click', function () {
+                        // Appeler la fonction pour remonter d'un niveau
+                        cmd_action('CD2', '..');
+                    });
+                    liDotDot.appendChild(buttonDotDot);
+                    ul.appendChild(liDotDot);
+
+                    // Ajouter les boutons pour les répertoires
+                    directories.forEach(function (directory) {
+                        var li = document.createElement('li');
+
+                        // Créer un bouton pour chaque répertoire
+                        var button = document.createElement('button');
+                        button.textContent = directory;
+                        button.addEventListener('click', function () {
+                            // Appeler la fonction pour changer de répertoire avec le nom du répertoire
+                            cmd_action('CD2', directory);
+                        });
+
+                        // Ajouter le bouton au li
+                        li.appendChild(button);
+
+                        // Ajouter le li à la liste à puces
+                        ul.appendChild(li);
+                    });
+
+                    // Ajouter la liste à puces au modal
+                    modalBody.appendChild(ul);
+
+                    // Afficher le modal après l'ajout des éléments
+                    var myModal = new bootstrap.Modal(document.getElementById('cD'));
+                    myModal.show();
+                } else {
+                    modalBody.textContent = response.message;
+                }
+            }
+        </script>
+    </head>
+    <body onload="BODY_onLoad()">
+        <div class="containerg">
+            <div class="terminal_toolbar">
+                <div class="butt">
+                    <button class="btn btn-color"></button>
+                    <button class="btn"></button>
+                    <button class="btn"></button>
+                </div>
+                <div class="butt">
+                    <input type="text" id="username" placeholder="Nom d'utilisateur" width="15px">
+                    <input type="password" id="password" placeholder="Mot de passe"width="15px">
+                    <button id="loginButton" onclick="cmd_action('LOGIN')">LOGIN</button>
+                    <button id="logoutButton" onclick="cmd_action('LOGOUT')">LOGOUT</button>
+                    <button onclick="cmd_action('WHOAMI')">WHOAMI</button>
+                    <button onclick="cmd_action('DIR')">DIR</button>
+                    <button data-bs-toggle="modal" data-bs-target="#cD" onclick="cmd_action('CD1')">CD</button>
+                    <button onclick="cmd_action('HOME')">HOME</button>
+                </div>
+                <p class="user" id="user">Connectez-vous pour faire des actions</p>
+                <button class="add_tab">
+                    +
+                </button>
+            </div>
+            <div class="terminal_body">
+                <div class="terminal_promt">
+                    <span class="terminal_user" id="terminal_user"></span>
+                    <span class="terminal_location">~</span>
+                    <span class="terminal_bling">$</span>
+                    <span class="terminal_cursor"></span>
+                    <div style="display: flex; flex-direction: column;">
+                        <!-- <textarea id="terminal-input2" heigth="10px"></textarea> -->
+                        <textarea id="terminal-input" ></textarea>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>  
+        
+        <!-- Modal -->
+        <div class="modal" id="cD" tabindex="-1" aria-labelledby="cDLabel" aria-hidden="true">
+            <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                <h1 class="modal-title fs-5" id="cDLabel">Change Directory</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+    
+                </div>
+            </div>
+            </div>
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var myModal = new bootstrap.Modal(document.getElementById('cD'));
+        
+                myModal._element.addEventListener('hidden.bs.modal', function (event) {
+                    // Supprimer l'arrière-plan sombre (overlay) après la fermeture du modal
+                    document.body.classList.remove('modal-open');
+                    var modalBackdrops = document.getElementsByClassName('modal-backdrop');
+                    while (modalBackdrops[0]) {
+                        modalBackdrops[0].parentNode.removeChild(modalBackdrops[0]);
+                    }
+                });
+            });
+        </script>
+    </body>
+</html>
