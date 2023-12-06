@@ -68,21 +68,19 @@ function WHOAMI(){
 function DIRECTORY() {
     global $_PARAMS;
     if(isset($_SESSION['username'])) {
-        $rep = 'users/' . $_SESSION['username'];
+        $rep = $_SESSION['home'] . $_SESSION['pwd'];
         $dirs = scandir($rep);
         $response = array('status' => 'success', 'directories' => array());
-
         foreach ($dirs as $dir) {
-            // if ($dir != '.' && $dir != '..') {
+            if ($dir != '.') {
                 $location = $rep . '/' . $dir;
                 if (is_dir($location)) {
                     $response['directories'][] = array('type' => 'dir', 'name' => $dir);
                 } elseif(is_file($location)) {
                     $response['directories'][] = array('type' => 'file', 'name' => $dir, 'size' => SIZE($location), 'date' => filemtime($location));
                 }
-            // }
+            }
         }
-
         // Envoyer une réponse au format JSON
         send_response('DIRECTORY', $response['status'], $response['directories']);
         exit;
@@ -114,63 +112,32 @@ function send_response($cmd, $status, $content = null){
     // }    
     exit;
 }
-function LIST_DIRECTORIES() {
+function CD() {
     global $_PARAMS;
-    if (isset($_SESSION['username'])) {
-        $currentDirectory = $_SESSION['home'] . $_SESSION['pwd'];
-        
-        // Vérifier si le chemin du répertoire existe avant d'appeler scandir
-        if (is_dir($currentDirectory)) {
-            $dirs = scandir($currentDirectory);
-            $directories = array();
-            foreach ($dirs as $dir) {
-                if ($dir != '.' && $dir != '..' && is_dir($currentDirectory . '/' . $dir)) {
-                    $directories[] = $dir;
-                }
-            }
-            $response = array('status' => 'success', 'directories' => $directories);
-            send_response('LIST_DIRECTORIES', $response['status'], $response['directories']);
-            exit;
-        } else {
-            $response = array('status' => 'error', 'message' => 'Directory not found');
-            send_response('LIST_DIRECTORIES', $response['status'], $response['message']);
-            exit;
-        }
-    } else {
-        $response = array('status' => 'error', 'message' => 'User not logged in');
-        send_response('LIST_DIRECTORIES', $response['status'], $response['message']);
-        exit;
-    }
-}
-function CHANGE_DIRECTORY() {
-    global $_PARAMS;
-    $newDirectory = $_PARAMS['PARAM1'];
-    if (!empty($newDirectory)) { // S'assurer que le nouveau répertoire est défini
-        if ($newDirectory == '..') {
-            // Si le nouveau répertoire est "..", remonter d'un niveau
-            $parts = explode('/', rtrim($_SESSION['pwd'], '/'));
-            $extractedValue = array_pop($parts);
 
-            // Vérifier si le chemin est déjà la racine
+    $newDirectory = isset($_PARAMS['PARAM1']) ? $_PARAMS['PARAM1'] : '';
+
+    if (!empty($newDirectory)) {
+        // Si le nouveau répertoire est "..", remonter d'un niveau
+        if ($newDirectory == '..') {
+            $parts = explode('/', rtrim($_SESSION['pwd'], '/'));
+            array_pop($parts);
+
             if (empty($parts)) {
                 $_SESSION['pwd'] = '/';
             } else {
-                // Vérifier si le tableau a plus d'un élément après l'extraction de ".."
-                if (count($parts) > 1) {
-                    $_SESSION['pwd'] = implode('/', $parts) . '/';
-                } else {
-                    $_SESSION['pwd'] = implode('/', $parts);
-                }
+                $_SESSION['pwd'] = implode('/', $parts) . '/';
             }
-            if($_SESSION['pwd'] == ""){
+
+            if ($_SESSION['pwd'] == "") {
                 $_SESSION['pwd'] = "/";
             }
-            // Envoyer une réponse pour indiquer que le répertoire a été changé avec succès
+
             send_response('CD', 'success', 'Directory changed successfully');
         } else {
             $newDirectoryPath = $_SESSION['home'] . $_SESSION['pwd'] . $newDirectory;
+
             if (is_dir($newDirectoryPath)) {
-                // Ajouter un "/" à la fin du chemin si ce n'est pas déjà le cas
                 $_SESSION['pwd'] = rtrim($_SESSION['pwd'], '/') . '/';
                 $_SESSION['pwd'] .= $newDirectory . '/';
                 send_response('CD', 'success', 'Directory changed successfully');
@@ -180,10 +147,11 @@ function CHANGE_DIRECTORY() {
         }
     } else {
         send_response('CD', 'error', 'Missing parameters');
-        error_log('There is no PARAM1 in the $_PARAMS["PARAM1"]');
+        error_log('Missing PARAM1 in the $_PARAMS["PARAM1"]');
     }
     exit;
 }
+
 function HOME(){
     global $_PARAMS;
     $_SESSION['pwd'] = '/';
@@ -198,13 +166,12 @@ function HOME(){
 
 
 switch($CMD) {
-    case "LOGIN" : LOGIN() ; break;
-    case "LOGOUT": LOGOUT(); break;
-    case "WHOAMI": WHOAMI(); break;
-    case "DIR": DIRECTORY(); break;
-    case "CD1": LIST_DIRECTORIES(); break;
-    case "CHANGE_DIRECTORY": CHANGE_DIRECTORY(); break;
-    case "HOME": HOME(); break;
+    case "LOGIN"    :  LOGIN()    ;        break;
+    case "LOGOUT"   :  LOGOUT()   ;        break;
+    case "WHOAMI"   :  WHOAMI()   ;        break;
+    case "DIR"      :  DIRECTORY();        break;
+    case "CD"       :  CD()       ;        break;
+    case "HOME"     :  HOME()     ;        break;
 
 
     default:
