@@ -42,3 +42,6 @@ SESSION
 user    DUPONT
 home    c:/wamp64/www/USERS
 pwd     /                       répertoire courant de 
+
+=======
+CMD = 'NANO'

@@ -3,10 +3,8 @@ session_start();
 //-----récupérer les paramètres----
 $_PARAMS = $_POST;
 //---------------------------------
-
 $CMD = $_PARAMS['CMD'];
-
-function SIZE($location) {
+function SIZE($location) {// Calcul la taille d'un fichier
     $size = filesize($location);
     $fileSize = 0;
     
@@ -18,14 +16,13 @@ function SIZE($location) {
     }
     return $fileSize;
 }
-function LOGIN(){
+function LOGIN(){//Login de l'utilisateur. Enregistrement du username
     global $_PARAMS; 
     $param1 = isset($_PARAMS['PARAM1']) ? $_PARAMS['PARAM1'] : '';
     $param2 = isset($_PARAMS['PARAM2']) ? $_PARAMS['PARAM2'] : '';
 
     if (!empty($param1) && !empty($param2)) {
         $_SESSION['username'] = $param1;
-        $_SESSION['mdp'] = $param2;
 
         if (!is_dir("users/" . $_SESSION['username'])) {
             mkdir("users/" . $_SESSION['username'], 0777, true);
@@ -45,7 +42,7 @@ function LOGIN(){
     send_response('LOGIN', $response['status'], $response['message']);
     exit; 
 }
-function LOGOUT(){
+function LOGOUT(){// Destruction de la session actuelle
     global $_PARAMS;
     session_unset();
     session_destroy();
@@ -53,7 +50,7 @@ function LOGOUT(){
     send_response('LOGOUT', 'success', 'Logout successful');
     exit;
 }
-function WHOAMI(){
+function WHOAMI(){// Renvoie le nom d'utilisateur
     global $_PARAMS;
     if(isset($_SESSION['username'])) {
         $response = array('status' => 'success', 'username' => $_SESSION['username']);
@@ -65,7 +62,7 @@ function WHOAMI(){
     }
     exit;
 }
-function DIRECTORY() {
+function DIRECTORY(){// Liste tous les répertoires dans le répertoire courant
     global $_PARAMS;
     if(isset($_SESSION['username'])) {
         $rep = $_SESSION['home'] . $_SESSION['pwd'];
@@ -90,7 +87,7 @@ function DIRECTORY() {
         exit;
     }
 }
-function send_response($cmd, $status, $content = null){
+function send_response($cmd, $status, $content = null){// Renvoie de la réponse (appelé dans toutes les fonctions utiles)
     global $_PARAMS;
     $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'N/A';
 
@@ -112,7 +109,7 @@ function send_response($cmd, $status, $content = null){
     // }    
     exit;
 }
-function CD() {
+function CD(){// Change le répertoire courant
     global $_PARAMS;
 
     $newDirectory = isset($_PARAMS['PARAM1']) ? $_PARAMS['PARAM1'] : '';
@@ -151,8 +148,7 @@ function CD() {
     }
     exit;
 }
-
-function HOME(){
+function HOME(){// Défini le pwd sur "/"
     global $_PARAMS;
     $_SESSION['pwd'] = '/';
     if($_SESSION['pwd'] == '/'){
@@ -163,8 +159,68 @@ function HOME(){
         
     
 }
+function MakeDir() {
+    global $_PARAMS;
 
+    $newDirName = isset($_PARAMS['PARAM1']) ? $_PARAMS['PARAM1'] : '';
 
+    if (!empty($newDirName)) {
+        $newDirPath = $_SESSION['home'] . $_SESSION['pwd'] . $newDirName;
+
+        if (!file_exists($newDirPath)) {
+            mkdir($newDirPath, 0777, true);
+            $response = array('status' => 'success', 'message' => 'Directory created successfully');
+        } else {
+            $response = array('status' => 'error', 'message' => 'Directory already exists');
+        }
+    } else {
+        $response = array('status' => 'error', 'message' => 'Missing parameters');
+    }
+
+    send_response('MKDIR', $response['status'], $response['message']);
+}
+function RemoveDir() { // Analyse de la requête et lancement des actions
+    global $_PARAMS;
+
+    $dirToRemove = isset($_PARAMS['PARAM1']) ? $_PARAMS['PARAM1'] : '';
+
+    if (!empty($dirToRemove)) {
+        $dirPath = $_SESSION['home'] . $_SESSION['pwd'] . $dirToRemove;
+
+        if (is_dir($dirPath)) {
+            $result = removeDirectory($dirPath);
+            send_response('RMDIR', $result['status'], $result['message']);
+        } else {
+            $response = array('status' => 'error', 'message' => 'Directory not found');
+            send_response('RMDIR', $response['status'], $response['message']);
+        }
+    } else {
+        $response = array('status' => 'error', 'message' => 'Missing parameters');
+        send_response('RMDIR', $response['status'], $response['message']);
+    }
+}
+function removeDirectory($directoryPath) {//logique de suppression de répertoire de la fonction RemoveDir
+    if (!is_dir($directoryPath)) {
+        return ['status' => 'error', 'message' => 'Le répertoire spécifié n\'existe pas.'];
+    }
+
+    $files = array_diff(scandir($directoryPath), ['.', '..']);
+
+    foreach ($files as $file) {
+        $filePath = $directoryPath . '/' . $file;
+        if (is_dir($filePath)) {
+            removeDirectory($filePath);
+        } else {
+            unlink($filePath);
+        }
+    }
+
+    if (rmdir($directoryPath)) {
+        return ['status' => 'success', 'message' => 'Le répertoire a été supprimé avec succès.'];
+    } else {
+        return ['status' => 'error', 'message' => 'Erreur lors de la suppression du répertoire.'];
+    }
+}
 switch($CMD) {
     case "LOGIN"    :  LOGIN()    ;        break;
     case "LOGOUT"   :  LOGOUT()   ;        break;
@@ -172,6 +228,8 @@ switch($CMD) {
     case "DIR"      :  DIRECTORY();        break;
     case "CD"       :  CD()       ;        break;
     case "HOME"     :  HOME()     ;        break;
+    case "MKDIR"    :  MakeDir()  ;        break;
+    case "RMDIR"    :  RemoveDir();        break;
 
 
     default:
@@ -180,6 +238,4 @@ switch($CMD) {
     echo json_encode($response);
     break;
 }
-
-
 ?>

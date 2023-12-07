@@ -135,6 +135,10 @@
                     });
                 });
             }
+            function openMkDirModal() {
+                var myModal = new bootstrap.Modal(document.getElementById('mkDir'));
+                myModal.show();
+            }
             function openDirectoryModal() { // Permet d'ouvrir le modal bootstrap sans changer de chemain
                 // Ajoutez ici le code pour ouvrir le modal
                 var myModal = new bootstrap.Modal(document.getElementById('cD'));
@@ -143,6 +147,15 @@
                 // Initialisez le contenu du modal (liste des répertoires, etc.)
                 sendRequest('DIR', null, null, function (response) {
                     handleDirectoryList(response);
+                });
+            }
+            function openDeleteModal() {
+                var deleteModal = new bootstrap.Modal(document.getElementById('deleteDir'));
+                deleteModal.show();
+
+                // Initialisez le contenu du modal (liste des répertoires, etc.)
+                sendRequest('DIR', null, null, function (response) {
+                    handleDeleteModal(response);
                 });
             }
             function handleDirectoryList(response) { // Permet de créer les boutons qui change le répertoire (PWD) à l'intérieur du modal.
@@ -189,6 +202,50 @@
                 modalBody.textContent = response.message;
             }
         }
+            function handleDeleteModal(response) {
+                var modalBody = document.querySelector('.delete-modal-body');
+                modalBody.innerHTML = ''; // Effacer le contenu actuel du modal
+
+                if (response.status === 'success') {
+                    var directories = response.content;
+
+                    // Créer une liste à puces pour afficher les répertoires dans le modal
+                    var ul = document.createElement('ul');
+
+                    // Ajouter les boutons pour les répertoires
+                    directories.forEach(function (directory) {
+                        var li = document.createElement('li');
+                        var button = document.createElement('button');
+
+                        // Ajouter le texte du répertoire au bouton
+                        button.textContent = directory.name;
+
+                        // Ajouter l'événement de suppression au bouton
+                        button.addEventListener('click', function () {
+                            // Appeler la fonction pour supprimer le répertoire avec le nom saisi
+                            sendRequest('RMDIR', directory.name, null, function (response) {
+                                handleResponse(response);
+                                // Mettre à jour la liste des répertoires après la suppression du répertoire
+                                sendRequest('DIR', null, null, function (response) {
+                                    handleDeleteModal(response);
+                                });
+                            });
+                        });
+
+                        // Ajouter le bouton au li
+                        li.appendChild(button);
+
+                        // Ajouter le li à la liste à puces
+                        ul.appendChild(li);
+                    });
+
+                    // Ajouter la liste à puces au modal
+                    modalBody.appendChild(ul);
+                } else {
+                    modalBody.textContent = response.message;
+                }
+            }
+
             function cmd_action(cmd, param = null) { // Traite les commandes envoyés par la page html
                 if (cmd == 'LOGIN') {
                     param1 = document.getElementById("username").value;
@@ -197,8 +254,7 @@
                         handleResponse(response);
                         terminalUser.textContent = terminalUser2.textContent = param1 + "@admin:";
                     });
-                } else if (cmd == 'LOGOUT') {
-                    
+                } else if (cmd == 'LOGOUT') {                   
                     sendRequest(cmd, null, null, function (response) {
                         handleResponse(response);
                         terminalUser.textContent = terminalUser2.textContent = "Connectez-vous pour faire des actions";
@@ -231,6 +287,28 @@
                     sendRequest(cmd, null, null, function (response) {
                         handleResponse(response);
                     });
+                }else if(cmd == 'MKDIR'){
+                    var dirName = document.getElementById('dirName').value;
+                    if (dirName.trim() !== "") {
+                        // Appeler la fonction pour créer le répertoire avec le nom saisi
+                        sendRequest('MKDIR', dirName, null, function (response) {
+                            handleResponse(response);
+                            // Mettre à jour la liste des répertoires après la création du répertoire
+                            sendRequest('DIR', null, null, function (response) {
+                                handleDirectoryList(response);
+                            });
+                        });
+
+                        var currentModal = document.getElementById('mkDir');
+                        // Fermer le modal actuel
+                        var currentBootstrapModal = bootstrap.Modal.getInstance(currentModal);
+                        if (currentBootstrapModal) {
+                            currentBootstrapModal.hide();
+                        }
+                    } else {
+                        // Gérer le cas où le champ est vide
+                        alert("Veuillez saisir un nom de répertoire valide.");
+                    }
                 }else {
                         modalBody.textContent = response.message;
                     }
@@ -252,8 +330,10 @@
                     <button id="logoutButton" onclick="cmd_action('LOGOUT')">LOGOUT</button>
                     <button onclick="cmd_action('WHOAMI')">WHOAMI</button>
                     <button onclick="cmd_action('DIR')">DIR</button>
-                    <button data-bs-toggle="modal" data-bs-target="#cD" onclick="cmd_action('CD', '')">CD</button>
+                    <button data-bs-toggle="cD" data-bs-target="#cD" onclick="cmd_action('CD')">CD</button>
                     <button onclick="cmd_action('HOME')">HOME</button>
+                    <button data-bs-toggle="mkDir" data-bs-target="#mkDir" onclick="openMkDirModal()">MKDIR</button>
+                    <button data-bs-toggle="deleteDir" data-bs-target="#deleteDir" onclick="openDeleteModal()">RMDIR</button>
                 </div>
                 <p class="user" id="user">Connectez-vous pour faire des actions</p>
                 <button class="add_tab">
@@ -275,7 +355,7 @@
             </div>
         </div>  
         
-        <!-- Modal -->
+        <!-- Modal CD-->
         <div class="modal" id="cD" tabindex="-1" aria-labelledby="cDLabel" aria-hidden="true">
             <div class="modal-dialog">
             <div class="modal-content">
@@ -289,6 +369,46 @@
             </div>
             </div>
         </div>
+
+        <!-- Modal MKDIR-->
+        <div class="modal fade" id="mkDir" tabindex="-1" aria-labelledby="mkDirLabel" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h1 class="modal-title fs-5" id="mkDirLabel">Nouveau Répertoire</h1>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <form>
+                    <div class="mb-3">
+                        <label for="dirName" class="col-form-label">Nom du nouveau répertoire :</label>
+                        <input type="text" class="form-control" id="dirName">
+                    </div>
+                  </form>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="mkDir">Close</button>
+                  <button type="button" class="btn btn-primary" onclick="cmd_action('MKDIR')">Send message</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Modal DELETE-->
+            <div class="modal fade" id="deleteDir" tabindex="-1" aria-labelledby="deleteDirLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" id="deleteDirLabel">Supprimer Répertoire</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body delete-modal-body">
+                            <!-- Le contenu du modal sera généré dynamiquement ici -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 var myModal = new bootstrap.Modal(document.getElementById('cD'));
